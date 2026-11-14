@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+!frontend/.env.development
+__pycache__/
+*.pyc
+data/
+cookies.txt
+.DS_Store
+.venv/
+frontend/_backup/
+frontend/_shots/
+scripts/eval/segments_cache.json

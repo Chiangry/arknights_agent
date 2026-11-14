@@ -1,0 +1,9 @@
+faster-whisper>=1.1.0
+chromadb
+openai
+python-dotenv
+yt-dlp
+fastapi
+uvicorn[standard]
+python-multipart
+psycopg[binary]
