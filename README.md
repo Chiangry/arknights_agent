@@ -90,29 +90,32 @@ data: {"status":"processing","step":"fetch","step_index":0,"pct":45,"message":"�
 
 **对局 Agent** 位于 `agents/game/`。向 `/api/ask` 传入 `game_state`（首轮可传 `{}`）启用，后续请求带上最新 `game_state` 事件返回的状态。Agent 负责合并对局信息、排除不可执行动作和决定是否追问；需要查证时，它把检索词和对局约束交给 `app/services.py` 的共享问答流程。知识库检索、B 站补查、转写确认和引用不另写一套。
 
-## 前端（Vite + Vue3 + TS + Pinia）
-代码在 `frontend/`。技术栈：Vue3 Composition API + TypeScript + Vue Router(hash) + Pinia + SCSS，请求走 fetch，进度用 EventSource、问答用 fetch 解析 SSE。
+## 前端（PRTS 战术攻略知识库）
+
+代码在 `frontend/`，使用 React、TypeScript、Vite 和 Tailwind CSS。默认连接现有 FastAPI 后端，支持战术问答、引用、B 站补查与转写确认、转写选择入库、本地文件与 B 站链接导入，以及知识库浏览。原型中的部署时间轴、关键帧识别、干员关联和知识分区没有对应的后端能力，真实模式下不会生成模拟结果。
 
 ```bash
-# 1. 先起后端（项目根目录）
-uvicorn app.main:app --port 8000 --reload
+# 终端 1：在项目根目录（video_rag 环境）
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
-# 2. 另开终端起前端（frontend/ 目录，Node 18+）
+# 终端 2：在项目根目录
+# 推荐使用 Node.js 24
 cd frontend
-npm install
-npm run dev          # http://127.0.0.1:5173
+npm ci
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
 前端目录：
 ```
 frontend/src/
-├── api/        # client(封装) / videos(列表·导入·进度SSE) / qa(问答流)
-├── stores/     # videos / parse(任务状态机) / chat(消息流)
-├── views/      # LibraryView(添加视频) / ChatView(问答)
-├── components/ # Sidebar / ImportPanel / ParseProgress / VideoList / ChatMessage / Composer / CitationTag
-├── router/  types/  styles/
+├── App.tsx       # 页面切换与演示状态
+├── components/   # 问答、添加视频、知识库与预览
+├── api/          # 共用后端请求与 SSE
+├── data/         # 后端数据到 UI 的转换与演示数据
+├── assets/       # 背景和封面
+└── types/        # 数据类型
 ```
-后端地址由 `frontend/.env.development` 的 `VITE_API_BASE` 控制。
+开发地址为 `http://127.0.0.1:5173`，生产构建使用 `npm run build`。可在 `frontend/.env.local` 中设置 `VITE_API_BASE`（默认 `http://127.0.0.1:8000`）或设置 `VITE_DEMO_MODE=true` 恢复压缩包的独立演示模式。
 
 ## 验证示例
 ```

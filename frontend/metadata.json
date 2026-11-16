@@ -1,0 +1,6 @@
+{
+  "name": "PRTS 战术攻略知识库",
+  "description": "面向明日方舟的轻量化浅色毛玻璃风格 RAG 与 Agent 攻略知识库工作台，包含视频解析入库与 AI 战术问答页面。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

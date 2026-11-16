@@ -4,7 +4,7 @@
 !frontend/.env.development
 __pycache__/
 *.pyc
-data/
+/data/
 cookies.txt
 .DS_Store
 .venv/

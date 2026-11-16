@@ -1,11 +1,16 @@
 import { API_BASE, ApiError, request } from './client'
-import type { AgentStep, AudioImportOption, Citation, ExternalVideo, GameState } from '@/types'
+import type { AgentStep, AudioImportOption, Citation, ExternalVideo, GameState } from '../types/backend'
 
 export interface AudioConfirmation {
   videos: (Pick<ExternalVideo, 'bvid' | 'title'>
     & { [K in 'author' | 'pubdate' | 'duration' | 'play' | 'description']?: ExternalVideo[K] | null })[]
   max_mib_per_video: number
   timeout_seconds: number
+}
+
+export interface ExternalSearchDetails {
+  reason?: string
+  missing?: string[]
 }
 
 export function confirmAudio(taskId: string, selectedBvids: string[]): Promise<{ accepted: boolean }> {
@@ -25,7 +30,7 @@ export interface AskHandlers {
   onCitations: (citations: Citation[]) => void
   onDelta: (text: string) => void
   onAnswerReplace: (text: string, citations: Citation[]) => void
-  onExternalSearch: (videos: ExternalVideo[]) => void
+  onExternalSearch: (videos: ExternalVideo[], details: ExternalSearchDetails) => void
   onAgentStep: (step: AgentStep) => void
   onDone: (citations: Citation[]) => void
 }
@@ -39,11 +44,13 @@ export async function streamAsk(
   handlers: AskHandlers,
   history: { role: 'user' | 'assistant'; content: string }[] = [],
   gameState?: GameState,
+  signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/api/ask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
     body: JSON.stringify({ question, history, game_state: gameState }),
+    signal,
   })
   if (!res.ok || !res.body) {
     const body = await res.json().catch(() => ({}))
@@ -82,7 +89,9 @@ export async function streamAsk(
         else if (event === 'audio_import_offer') handlers.onAudioImportOffer(data.videos)
         else if (event === 'heartbeat') handlers.onPauseState(data.paused === true)
         else if (event === 'citations') handlers.onCitations(data.citations || [])
-        else if (event === 'external_search') handlers.onExternalSearch(data.videos || [])
+        else if (event === 'external_search') handlers.onExternalSearch(data.videos || [], {
+          reason: data.reason, missing: data.missing,
+        })
         else if (event === 'agent_step') handlers.onAgentStep(data)
         else if (event === 'delta') handlers.onDelta(data.text || '')
         else if (event === 'answer_replace') handlers.onAnswerReplace(data.text, data.citations || [])

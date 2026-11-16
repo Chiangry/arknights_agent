@@ -1,5 +1,5 @@
-import { request } from './client'
-import type { AudioImportOption, Video, TaskSnapshot } from '@/types'
+import { API_BASE, request } from './client'
+import type { AudioImportOption, Video, TaskSnapshot } from '../types/backend'
 
 export interface CreateTaskResult {
   task_id: string
@@ -22,6 +22,13 @@ export async function checkSubtitle(url: string): Promise<SubtitleCheck> {
 export async function fetchVideos(): Promise<Video[]> {
   const data = await request<{ videos: Video[] }>('/api/videos')
   return data.videos || []
+}
+
+export async function searchBilibili(query: string) {
+  const data = await request<{ videos: import('../types/backend').ExternalVideo[] }>(
+    `/api/search/bilibili?query=${encodeURIComponent(query)}`,
+  )
+  return data.videos
 }
 
 export function setTaskPaused(taskId: string, paused: boolean): Promise<TaskSnapshot> {
@@ -63,7 +70,7 @@ export function subscribeTask(
   onSettled: (snap: TaskSnapshot) => void,
   onError?: () => void,
 ): () => void {
-  const es = new EventSource(`${import.meta.env.VITE_API_BASE || 'http://127.0.0.1:8000'}/api/tasks/${taskId}/stream`)
+  const es = new EventSource(`${API_BASE}/api/tasks/${taskId}/stream`)
 
   const handler = (e: MessageEvent) => {
     const snap: TaskSnapshot = JSON.parse(e.data)

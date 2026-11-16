@@ -14,7 +14,7 @@ const defaultRender =
   ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
 
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
-  tokens[idx].attrSet('target', '_blank')
+  if (!String(tokens[idx].attrGet('href') || '').startsWith('#source-')) tokens[idx].attrSet('target', '_blank')
   tokens[idx].attrSet('rel', 'noopener noreferrer')
   return defaultRender(tokens, idx, options, env, self)
 }
