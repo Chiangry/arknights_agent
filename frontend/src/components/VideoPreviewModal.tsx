@@ -20,6 +20,14 @@ export function VideoPreviewModal({
   const seconds = highlightTimestamp?.split(':').reduce((acc, n) => acc * 60 + Number(n), 0);
   const link = video.sourceUrl && biliUrl(video.bvId, seconds);
 
+  const isEndfield = video.game === 'endfield';
+  const accentTextClass = isEndfield ? 'text-[#9A7400]' : 'text-[#008DB3]';
+  const overlayTimeTextClass = isEndfield ? 'text-[#FFE600]' : 'text-cyan-200';
+  const ctaButtonClass = isEndfield
+    ? 'bg-[#FFE600] text-[#18181B] hover:bg-[#F5D800]'
+    : 'bg-[#17D1FF] text-[#071B26] hover:bg-[#33D9FF]';
+  const highlightBgClass = isEndfield ? 'bg-[#FFE600]/18' : 'bg-[#17D1FF]/12';
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/25 backdrop-blur-sm"
@@ -35,8 +43,10 @@ export function VideoPreviewModal({
         {/* Top Modal Header */}
         <div className="px-6 py-4 border-b border-slate-200/70 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-xs text-slate-500 font-mono tabular-nums">
-              <span className="text-[#008DB3] font-semibold">{video.stageCode}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono tabular-nums">
+              <span className="font-semibold text-slate-800">{video.gameLabel}</span>
+              <span aria-hidden="true">·</span>
+              <span className={`${accentTextClass} font-semibold`}>{video.stageCode}</span>
               <span aria-hidden="true">·</span>
               <span>{video.creator}</span>
               {(video.publishedAt || video.indexedAt) && <>
@@ -75,11 +85,17 @@ export function VideoPreviewModal({
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent" />
             <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4 text-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#17D1FF] text-[#071B26] flex items-center justify-center shadow-[0_0_20px_rgba(23,209,255,0.5)]">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg ${
+                    isEndfield
+                      ? 'bg-[#FFE600] text-[#18181B]'
+                      : 'bg-[#17D1FF] text-[#071B26]'
+                  }`}
+                >
                   <Play className="w-4 h-4 fill-current ml-0.5" />
                 </div>
                 <div>
-                  <p className="text-xs text-cyan-200 font-mono tabular-nums">
+                  <p className={`text-xs font-mono tabular-nums ${overlayTimeTextClass}`}>
                     {highlightTimestamp
                       ? `已定位至引用时间轴 · ${highlightTimestamp}`
                       : `总时长 · ${video.duration}`}
@@ -105,7 +121,9 @@ export function VideoPreviewModal({
             <h3 className="text-sm font-semibold text-slate-900">攻略核心摘要</h3>
             <p className="text-sm leading-relaxed text-slate-600">{video.summary}</p>
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 pt-1">
-              <span className="font-medium text-slate-700">关联干员实体：</span>
+              <span className="font-medium text-slate-700">
+                {isEndfield ? '关联干员 / 设施实体：' : '关联干员实体：'}
+              </span>
               {video.operators.map((op, index) => (
                 <span key={op} className="inline-flex items-center gap-2">
                   <span className="text-slate-800 font-medium">{op}</span>
@@ -119,7 +137,7 @@ export function VideoPreviewModal({
           {!video.backend && <div className="border-t border-slate-200/70 pt-5 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[#008DB3]" />
+                <Layers className={`w-4 h-4 ${accentTextClass}`} />
                 已提取的高光战术时间轴
               </h3>
               <span className="text-xs text-slate-500 font-mono tabular-nums">
@@ -133,10 +151,12 @@ export function VideoPreviewModal({
                   <div
                     key={item.timestamp}
                     className={`py-3 px-3 rounded-xl transition-colors flex items-start gap-4 ${
-                      isTarget ? 'bg-[#17D1FF]/12' : 'hover:bg-slate-50/70'
+                      isTarget ? highlightBgClass : 'hover:bg-slate-50/70'
                     }`}
                   >
-                    <span className="inline-flex items-center gap-1.5 text-xs font-mono tabular-nums font-semibold text-[#008DB3] pt-0.5 shrink-0">
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-xs font-mono tabular-nums font-semibold pt-0.5 shrink-0 ${accentTextClass}`}
+                    >
                       <Clock className="w-3.5 h-3.5" />
                       {item.timestamp}
                     </span>
@@ -169,7 +189,7 @@ export function VideoPreviewModal({
                 onAskAboutVideo(video);
                 onClose();
               }}
-              className="ark-chamfer-sm inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-[#17D1FF] text-[#071B26] hover:bg-[#33D9FF] transition-colors cursor-pointer whitespace-nowrap"
+              className={`ark-chamfer-sm inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${ctaButtonClass}`}
             >
               <MessageSquareText className="w-3.5 h-3.5" />
               针对此攻略提问

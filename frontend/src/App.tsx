@@ -74,8 +74,8 @@ export default function App() {
     : null;
 
   return (
-    <div className="min-h-screen relative bg-[#F2F6FA] text-slate-900 selection:bg-[#17D1FF]/30 selection:text-slate-950">
-      {/* Subtle Atmospheric Rhodes Light-Mode Backdrop + Tactical Grid */}
+    <div className="min-h-screen relative bg-[#F3F6FA] text-slate-900 selection:bg-[#17D1FF]/30 selection:text-slate-950">
+      {/* Subtle Atmospheric Rhodes + Endfield Light-Mode Backdrop + Tactical Grid */}
       <div
         aria-hidden="true"
         className="fixed inset-0 pointer-events-none overflow-hidden z-0"
@@ -83,12 +83,12 @@ export default function App() {
         <img
           src={BACKDROP_IMAGE}
           alt=""
-          className="w-full h-full object-cover opacity-[0.16] scale-105"
+          className="w-full h-full object-cover opacity-[0.14] scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#F4F8FC]/70 via-[#F2F6FA]/80 to-[#EEF4F9]/95" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#F5F7FA]/75 via-[#F3F6FA]/82 to-[#EFF3F8]/95" />
         <div className="absolute inset-0 tactical-grid-bg opacity-70" />
-        <div className="absolute -top-32 right-[12%] w-[560px] h-[560px] rounded-full bg-[#17D1FF]/14 blur-[120px]" />
-        <div className="absolute bottom-[-120px] left-[8%] w-[460px] h-[460px] rounded-full bg-sky-200/35 blur-[110px]" />
+        <div className="absolute -top-32 right-[10%] w-[540px] h-[540px] rounded-full bg-[#17D1FF]/14 blur-[120px]" />
+        <div className="absolute bottom-[-130px] left-[8%] w-[500px] h-[500px] rounded-full bg-[#FFE600]/14 blur-[125px]" />
       </div>
 
       {/* Main Foreground Shell */}
@@ -96,10 +96,11 @@ export default function App() {
         <TopNav activePage={activePage} onNavigate={setActivePage} />
 
         <main
-          className={`flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-6 lg:px-8 pt-4 ${
+          className={`flex-1 w-full px-4 sm:px-6 lg:px-8 pt-4 ${
             activePage === 'qa' ? 'pb-4' : 'pb-14'
           }`}
         >
+<div className="w-full max-w-[1600px] mx-auto">
           {backend.error && (
             <p role="alert" className="glass-panel mb-3 rounded-xl p-3 text-xs text-rose-700">
               知识库加载失败：{backend.error}{' '}
@@ -136,33 +137,36 @@ export default function App() {
               onGoToIngest={() => setActivePage('ingest')}
             />
           )}
+</div>
         </main>
 
         {activePage !== 'qa' && (
-          <footer className="max-w-[1360px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-            <span>PRTS 战术攻略知识库</span>
-            <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setActivePage('qa')}
-                className="hover:text-slate-900 transition-colors cursor-pointer"
-              >
-                AI 战术问答
-              </button>
-              <button
-                type="button"
-                onClick={() => setActivePage('ingest')}
-                className="hover:text-slate-900 transition-colors cursor-pointer"
-              >
-                添加攻略视频
-              </button>
-              <button
-                type="button"
-                onClick={() => setActivePage('library')}
-                className="hover:text-slate-900 transition-colors cursor-pointer"
-              >
-                攻略切片库
-              </button>
+          <footer className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-[1600px] mx-auto py-6 border-t border-slate-200/60 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+              <span>PRTS 战术攻略知识库</span>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActivePage('qa')}
+                  className="hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  AI 战术问答
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePage('ingest')}
+                  className="hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  添加攻略视频
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePage('library')}
+                  className="hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  攻略切片库
+                </button>
+              </div>
             </div>
           </footer>
         )}

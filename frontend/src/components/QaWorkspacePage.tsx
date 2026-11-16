@@ -192,6 +192,8 @@ export function QaWorkspacePage({
   const [threads, setThreads] = useState(initial.threads);
   const [activeThreadId, setActiveThreadId] = useState(initial.activeId);
   const [selectedScope, setSelectedScope] = useState<KnowledgeCategory>('all');
+  const [gameScope, setGameScope] = useState<'all' | 'arknights' | 'endfield'>('all');
+  const isEndfieldComposer = gameScope === 'endfield';
   const [inputValue, setInputValue] = useState<string>('');
   const [expandedTraceMsgIds, setExpandedTraceMsgIds] = useState<Record<string, boolean>>({});
   const [highlightedChunkId, setHighlightedChunkId] = useState<string | null>(null);
@@ -361,7 +363,9 @@ export function QaWorkspacePage({
       const patch = (update: (message: ChatMessage) => Partial<ChatMessage>) => updateMessage(currentThreadId, assistantId, update);
       const history = activeThread.messages.filter(m => m.content && !m.error && !m.pending).slice(-8)
         .map(({ role, content }) => ({ role, content }));
-      void streamAsk(trimmed, {
+      const requestQuestion = gameScope === 'all' ? trimmed
+        : `关于${gameScope === 'endfield' ? '明日方舟：终末地' : '明日方舟'}：${trimmed}`;
+      void streamAsk(requestQuestion, {
         onTask: taskId => patch(() => ({ taskId })),
         onGameState: gameState => setThreads(prev => prev.map(t => t.id === currentThreadId ? { ...t, gameState } : t)),
         onPauseState: paused => patch(m => m.paused === paused ? {} : ({ paused })),
@@ -538,12 +542,29 @@ export function QaWorkspacePage({
             </h1>
           </div>
 
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex gap-1 rounded-xl glass-subsurface p-1" aria-label="游戏主题">
+              {(['all', 'arknights', 'endfield'] as const).map(game => (
+                <button key={game} type="button" aria-pressed={gameScope === game}
+                  title="为问题补充游戏主题，仍检索整个知识库"
+                  onClick={() => { setGameScope(game); setSelectedScope('all'); }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${gameScope === game
+                    ? game === 'endfield' ? 'bg-[#FFE600] text-[#18181B]' : game === 'arknights' ? 'bg-[#17D1FF] text-[#071B26]' : 'bg-white text-slate-950'
+                    : 'text-slate-500 hover:text-slate-950'}`}>
+                  {game === 'all' ? '全部' : game === 'endfield' ? '终末地' : '明日方舟'}
+                </button>
+              ))}
+            </div>
           <div
             className="flex flex-wrap items-center gap-1 p-0.5 glass-subsurface rounded-lg"
             role="tablist"
             aria-label="检索范围"
           >
-            {SCOPE_OPTIONS.map((opt) => {
+            {(isEndfieldComposer ? [
+              { id: 'all' as const, label: '全部库' }, { id: 'aic' as const, label: '工业产线' },
+              { id: 'exploration' as const, label: '探索 Boss' }, { id: 'combo' as const, label: '配队连携' },
+              { id: 'char' as const, label: '角色评测' },
+            ] : SCOPE_OPTIONS).map((opt) => {
               const active = selectedScope === opt.id;
               return (
                 <button
@@ -565,6 +586,7 @@ export function QaWorkspacePage({
               );
             })}
           </div>
+          </div>
         </div>
 
         {/* Scrollable Conversation Thread */}
@@ -577,12 +599,17 @@ export function QaWorkspacePage({
                   <Sparkles className="w-5 h-5 text-[#008DB3]" />
                 </div>
                 <h2 className="text-2xl font-semibold text-slate-950 tracking-tight text-balance">
-                  有什么战术或关卡问题？
+                  有什么战术、工业或探索问题？
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full text-left">
-                {STARTER_PROMPTS.map((preset) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
+                {[
+                  { ...QA_SCENARIOS[0], tag: '明日方舟' },
+                  { ...QA_SCENARIOS[1], tag: '终末地 · 工业产线' },
+                  { ...QA_SCENARIOS[2], tag: '终末地 · 探索 Boss' },
+                  { id: 'endfield-wuling', prompt: '武陵城集成工业枢纽怎么扩建息壤产线与供电网？', tag: '可补查 B 站' },
+                ].map((preset) => (
                   <button
                     key={preset.id}
                     type="button"
@@ -1006,7 +1033,8 @@ export function QaWorkspacePage({
               </div>
             )}
 
-            <div className="flex flex-col gap-2 p-2.5 rounded-2xl bg-white/95 border border-slate-200/90 focus-within:border-[#17D1FF] focus-within:ring-4 focus-within:ring-[#17D1FF]/15 transition-all shadow-sm">
+            <div className={`flex flex-col gap-2 p-2.5 rounded-2xl bg-white/95 border border-slate-200/90 focus-within:ring-4 transition-all shadow-sm ${isEndfieldComposer
+              ? 'focus-within:border-[#EAB308] focus-within:ring-[#FFE600]/20' : 'focus-within:border-[#17D1FF] focus-within:ring-[#17D1FF]/15'}`}>
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -1023,7 +1051,7 @@ export function QaWorkspacePage({
                   onClick={() => setThreads(prev => prev.map(t => t.id === activeThreadId
                     ? { ...t, agentEnabled: !agentMode } : t))}
                   className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border disabled:opacity-50 ${agentMode
-                    ? 'bg-[#17D1FF]/16 border-[#17D1FF]/60 text-slate-950 font-semibold'
+                    ? isEndfieldComposer ? 'bg-[#FFE600]/26 border-[#EAB308] text-[#18181B] font-semibold' : 'bg-[#17D1FF]/16 border-[#17D1FF]/60 text-slate-950 font-semibold'
                     : 'bg-slate-100/80 border-slate-200/80 text-slate-600 hover:text-slate-950'}`}>
                   <Compass className={`w-3.5 h-3.5 ${agentMode ? 'text-[#008DB3]' : 'text-slate-500'}`} />
                   <span>战术推演</span>
@@ -1035,7 +1063,7 @@ export function QaWorkspacePage({
                 type="submit"
                 disabled={!inputValue.trim() || isThinking}
                 aria-label="发送问题"
-                className="ark-chamfer-sm h-8 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-semibold bg-[#17D1FF] text-[#071B26] hover:bg-[#33D9FF] disabled:opacity-45 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0"
+                className={`ark-chamfer-sm h-8 px-4 inline-flex items-center justify-center gap-1.5 text-xs font-semibold disabled:opacity-45 disabled:cursor-not-allowed transition-all cursor-pointer shrink-0 ${isEndfieldComposer ? 'bg-[#FFE600] text-[#18181B] hover:bg-[#F5D800]' : 'bg-[#17D1FF] text-[#071B26] hover:bg-[#33D9FF]'}`}
               >
                 <span>发送</span>
                 <ArrowUp className="w-3.5 h-3.5" />

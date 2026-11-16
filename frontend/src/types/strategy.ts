@@ -1,16 +1,25 @@
 export type PageView = 'qa' | 'ingest' | 'library';
 
+export type GameTitle = 'arknights' | 'endfield';
+export type GameScope = 'all' | GameTitle;
+
 export type KnowledgeCategory =
   | 'all'
   | 'main'
   | 'roguelike'
   | 'cc'
-  | 'operator';
+  | 'operator'
+  | 'aic'
+  | 'exploration'
+  | 'combo'
+  | 'char';
 
 export type VideoStatus = 'indexed' | 'processing' | 'queued' | 'error';
 
 export interface StrategyVideo {
   id: string;
+  game?: GameTitle;
+  gameLabel?: string;
   bvId: string;
   title: string;
   creator: string;
@@ -72,6 +81,7 @@ export interface OperatorCardItem {
 
 export interface RetrievedChunk {
   id: string;
+  game?: GameTitle;
   citationIndex: number;
   videoId: string;
   videoTitle: string;
@@ -99,6 +109,8 @@ export interface AgentAnalysisBlock {
 
 export interface QaScenario {
   id: string;
+  game: GameTitle;
+  gameLabel: string;
   prompt: string;
   category: Exclude<KnowledgeCategory, 'all'>;
   headline: string;
@@ -113,6 +125,8 @@ export interface QaScenario {
 
 export interface CandidateVideoResult {
   id: string;
+  game: GameTitle;
+  gameLabel: string;
   bvId: string;
   title: string;
   creator: string;

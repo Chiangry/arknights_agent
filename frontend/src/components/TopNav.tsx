@@ -12,44 +12,43 @@ export function TopNav({ activePage, onNavigate }: TopNavProps) {
     { id: 'library', label: '攻略切片库' },
   ];
 
-  const primaryAction =
-    activePage === 'ingest'
-      ? { label: '前往 AI 问答', target: 'qa' as PageView }
-      : { label: '导入攻略视频', target: 'ingest' as PageView };
-
   return (
     <header className="sticky top-0 z-40 px-4 sm:px-6 lg:px-8 pt-3 pb-2">
-      <div className="max-w-[1360px] mx-auto glass-panel-elevated rounded-2xl px-5 sm:px-7 h-16 flex items-center justify-between gap-8">
-        {/* Zone 1: Single-line Brand Wordmark */}
+      <div className="w-full max-w-[1600px] mx-auto glass-panel-elevated rounded-2xl px-6 sm:px-8 h-16 flex md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between gap-6">
+        {/* Brand Wordmark fusing Rhodes Cyan + Endfield Volt */}
         <button
           type="button"
           onClick={() => onNavigate('qa')}
-          className="flex items-center gap-3 text-left whitespace-nowrap shrink-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#17D1FF] rounded-md cursor-pointer"
+          className="flex items-center gap-3 text-left whitespace-nowrap shrink-0 justify-self-start focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#17D1FF] rounded-md cursor-pointer"
         >
           <svg
-            width="28"
-            height="28"
-            viewBox="0 0 28 28"
+            width="30"
+            height="30"
+            viewBox="0 0 30 30"
             fill="none"
             aria-hidden="true"
             className="shrink-0"
           >
             <polygon
-              points="14,2 26,14 14,26 2,14"
-              stroke="#0F172A"
-              strokeWidth="1.75"
+              points="15,2 28,15 15,28 2,15"
+              stroke="#18181B"
+              strokeWidth="1.6"
               fill="#FFFFFF"
             />
-            <polygon points="14,6.5 21.5,14 14,21.5 6.5,14" fill="#17D1FF" fillOpacity="0.22" />
-            <polygon points="14,9.5 18.5,14 14,18.5 9.5,14" fill="#17D1FF" />
+            <polygon points="15,6 15,24 6,15" fill="#17D1FF" fillOpacity="0.88" />
+            <polygon points="15,6 24,15 15,24" fill="#FFE600" fillOpacity="0.92" />
+            <polygon points="15,11 19,15 15,19 11,15" fill="#18181B" />
           </svg>
-          <span className="text-[17px] font-semibold tracking-tight text-slate-900">
-            PRTS 战术攻略库
+          <span className="text-[17px] font-semibold tracking-tight text-slate-950">
+            PRTS · 终末地攻略库
           </span>
         </button>
 
-        {/* Zone 2: Clean Text Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8" aria-label="主导航">
+        {/* Centered Compact Navigation Tabs */}
+        <nav
+          className="hidden md:flex items-center justify-center gap-4 lg:gap-6"
+          aria-label="主导航"
+        >
           {navItems.map((item) => {
             const isActive = activePage === item.id;
             return (
@@ -57,17 +56,29 @@ export function TopNav({ activePage, onNavigate }: TopNavProps) {
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`relative py-2 text-sm font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#17D1FF] rounded-sm ${
-                  isActive
-                    ? 'text-slate-950 font-semibold'
-                    : 'text-slate-600 hover:text-slate-950'
-                }`}
+                className="group relative px-3.5 py-2 text-sm transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#17D1FF] rounded-sm"
               >
-                {item.label}
+                <span className="inline-grid place-items-center">
+                  <span
+                    className={`col-start-1 row-start-1 ${
+                      isActive
+                        ? 'font-semibold text-slate-950'
+                        : 'font-medium text-slate-600 group-hover:text-slate-950'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="col-start-1 row-start-1 invisible font-semibold select-none"
+                  >
+                    {item.label}
+                  </span>
+                </span>
                 {isActive && (
                   <span
                     aria-hidden="true"
-                    className="absolute left-0 right-0 -bottom-0.5 h-[2.5px] bg-[#17D1FF] rounded-full shadow-[0_0_10px_rgba(23,209,255,0.6)]"
+                    className="absolute left-1.5 right-1.5 -bottom-0.5 h-[2.5px] dual-spectrum-line rounded-full"
                   />
                 )}
               </button>
@@ -75,21 +86,13 @@ export function TopNav({ activePage, onNavigate }: TopNavProps) {
           })}
         </nav>
 
-        {/* Zone 3: Single Primary CTA */}
-        <div className="flex items-center shrink-0">
-          <button
-            type="button"
-            onClick={() => onNavigate(primaryAction.target)}
-            className="ark-chamfer-sm px-4 py-2 text-[13px] font-semibold bg-[#17D1FF] text-[#071B26] hover:bg-[#33D9FF] active:scale-[0.98] transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer shadow-[0_4px_14px_rgba(23,209,255,0.32)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#008DB3]"
-          >
-            {primaryAction.label}
-          </button>
-        </div>
+        {/* Right Balance Spacer for True Center Alignment */}
+        <div className="hidden md:block" aria-hidden="true" />
       </div>
 
       {/* Mobile Compact Navigation Bar */}
       <nav
-        className="md:hidden mt-2 max-w-[1360px] mx-auto glass-panel rounded-xl p-1 flex items-center justify-between gap-1"
+        className="md:hidden mt-2 max-w-[1600px] mx-auto glass-panel rounded-xl p-1 flex items-center justify-between gap-1"
         aria-label="移动端导航"
       >
         {navItems.map((item) => {
