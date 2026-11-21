@@ -1,5 +1,5 @@
 import { API_BASE, request } from './client'
-import type { AudioImportOption, Video, TaskSnapshot } from '../types/backend'
+import type { AudioImportOption, Video, TaskSnapshot, VideoMetadata, VideoMetadataPreview, StoredVideoChunk, VisualWindow } from '../types/backend'
 
 export interface CreateTaskResult {
   task_id: string
@@ -24,6 +24,13 @@ export async function fetchVideos(): Promise<Video[]> {
   return data.videos || []
 }
 
+export function fetchVideoChunks(videoId: string, query: string, limit: number, offset: number, signal?: AbortSignal) {
+  const params = new URLSearchParams({ query, limit: String(limit), offset: String(offset) })
+  return request<{ total: number; chunks: StoredVideoChunk[] }>(
+    `/api/videos/${encodeURIComponent(videoId)}/chunks?${params}`, { signal },
+  )
+}
+
 export async function searchBilibili(query: string) {
   const data = await request<{ videos: import('../types/backend').ExternalVideo[] }>(
     `/api/search/bilibili?query=${encodeURIComponent(query)}`,
@@ -39,18 +46,50 @@ export function setTaskPaused(taskId: string, paused: boolean): Promise<TaskSnap
   })
 }
 
-export async function createBiliImport(url: string): Promise<CreateTaskResult> {
+export async function createBiliImport(url: string, metadata: VideoMetadata = {}): Promise<CreateTaskResult> {
   const fd = new FormData()
   fd.append('kind', 'bili')
   fd.append('url', url)
+  fd.append('metadata', JSON.stringify(metadata))
   return request<CreateTaskResult>('/api/videos', { method: 'POST', body: fd })
 }
 
-export async function createLocalImport(file: File): Promise<CreateTaskResult> {
+export async function decideVisualUpload(taskId: string, approved: boolean): Promise<void> {
+  await request(`/api/tasks/${encodeURIComponent(taskId)}/visual-confirmation`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ approved }),
+  })
+}
+
+export async function fetchVisualCoverage(videoId: string, signal?: AbortSignal) {
+  return request<{ duration: number | null; windows: VisualWindow[] }>(
+    `/api/videos/${encodeURIComponent(videoId)}/visual-coverage`, { signal },
+  )
+}
+
+export async function createLocalImport(file: File, metadata: VideoMetadata = {}): Promise<CreateTaskResult> {
   const fd = new FormData()
   fd.append('kind', 'local')
   fd.append('file', file)
+  fd.append('metadata', JSON.stringify(metadata))
   return request<CreateTaskResult>('/api/videos', { method: 'POST', body: fd })
+}
+
+export function updateVideo(videoId: string, metadata: VideoMetadata): Promise<Video> {
+  return request(`/api/videos/${encodeURIComponent(videoId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(metadata),
+  })
+}
+
+export async function deleteVideo(videoId: string): Promise<void> {
+  await request(`/api/videos/${encodeURIComponent(videoId)}`, { method: 'DELETE' })
+}
+
+export function previewVideoMetadata(url: string): Promise<VideoMetadataPreview> {
+  return request(`/api/video-metadata?url=${encodeURIComponent(url)}`)
+}
+
+export function refreshVideoMetadata(videoId: string): Promise<Video> {
+  return request(`/api/videos/${encodeURIComponent(videoId)}/refresh-metadata`, { method: 'POST' })
 }
 
 export function importCachedTranscript(video: AudioImportOption): Promise<

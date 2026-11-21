@@ -42,15 +42,19 @@ export interface AskHandlers {
 export async function streamAsk(
   question: string,
   handlers: AskHandlers,
-  history: { role: 'user' | 'assistant'; content: string }[] = [],
-  gameState?: GameState,
-  signal?: AbortSignal,
+  signal: AbortSignal,
+  turn: { thread_id: string; request_id: string; web_search: boolean },
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/ask`, {
+  const open = () => fetch(`${API_BASE}/api/ask`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify({ question, history, game_state: gameState }),
+    body: JSON.stringify({ question, ...turn }),
     signal,
+  })
+  const res = await open().catch(error => {
+    // 只重试尚未拿到响应头的网络失败，沿用相同请求 ID。
+    if (!(error instanceof TypeError) || signal.aborted) throw error
+    return open()
   })
   if (!res.ok || !res.body) {
     const body = await res.json().catch(() => ({}))
@@ -95,6 +99,7 @@ export async function streamAsk(
         else if (event === 'agent_step') handlers.onAgentStep(data)
         else if (event === 'delta') handlers.onDelta(data.text || '')
         else if (event === 'answer_replace') handlers.onAnswerReplace(data.text, data.citations || [])
+        else if (event === 'error') throw new Error(data.message || '问答失败')
         else if (event === 'done') {
           handlers.onDone(data.citations || [])
           completed = true

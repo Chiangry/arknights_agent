@@ -8,6 +8,7 @@ import { BACKDROP_IMAGE, INITIAL_VIDEOS } from './data/mockStrategyData';
 import { PageView, StrategyVideo } from './types/strategy';
 import { DEMO_MODE } from './data/backendPresentation';
 import { useVideoTasks } from './hooks/useVideoTasks';
+import { createBiliImport } from './api/videos';
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageView>('qa');
@@ -15,6 +16,7 @@ export default function App() {
   const backend = useVideoTasks(!DEMO_MODE);
   const videos = DEMO_MODE ? demoVideos : backend.library;
   const [scopedVideo, setScopedVideo] = useState<StrategyVideo | null>(null);
+  const [libraryNotice, setLibraryNotice] = useState('');
   const [modalState, setModalState] = useState<{
     videoId: string;
     timestamp?: string;
@@ -59,6 +61,7 @@ export default function App() {
   };
 
   const handleInspectVideo = (videoId: string, timestamp?: string) => {
+    setLibraryNotice('');
     setModalState({ videoId, timestamp });
   };
 
@@ -101,6 +104,7 @@ export default function App() {
           }`}
         >
 <div className="w-full max-w-[1600px] mx-auto">
+          {libraryNotice && <p role="status" className="mb-3 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700">{libraryNotice}</p>}
           {backend.error && (
             <p role="alert" className="glass-panel mb-3 rounded-xl p-3 text-xs text-rose-700">
               知识库加载失败：{backend.error}{' '}
@@ -121,6 +125,7 @@ export default function App() {
           <div hidden={activePage !== 'ingest'}>
             <VideoIngestPage
               videos={DEMO_MODE ? videos : [...backend.queue, ...videos]}
+              visualReports={backend.visualReports}
               onAddVideo={handleAddVideo}
               onTrackTask={backend.track}
               onPauseTask={backend.pause}
@@ -174,10 +179,26 @@ export default function App() {
 
       {/* Video Keyframe & Transcript Preview Modal */}
       <VideoPreviewModal
+        key={inspectedVideo?.id ?? 'closed-video'}
         video={inspectedVideo}
         highlightTimestamp={modalState?.timestamp}
         onClose={() => setModalState(null)}
         onAskAboutVideo={handleAskAboutVideo}
+        onMetadataSaved={backend.refresh}
+        onSupplementVideo={async video => {
+          const result = await createBiliImport(video.id);
+          backend.track(result.task_id, { ...video, status: 'queued', progress: 0, progressStage: '排队中' });
+          setModalState(null);
+          setActivePage('ingest');
+          setLibraryNotice('已启动全片画面解析；剩余时段需要上传时会统一确认一次。');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onDeleteVideo={async (id) => {
+          await backend.remove(id);
+          setModalState(null);
+          setScopedVideo(prev => prev?.id === id ? null : prev);
+          setLibraryNotice('视频已从知识库移除。');
+        }}
       />
     </div>
   );

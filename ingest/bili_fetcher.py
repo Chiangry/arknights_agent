@@ -72,6 +72,19 @@ def _view_info(s: requests.Session, bvid: str) -> dict:
     return d["data"]
 
 
+def fetch_video_metadata(bvid: str) -> dict:
+    """只读取平台档案，不下载视频或字幕。"""
+    from datetime import datetime, timezone
+    with _session() as session:
+        info = _view_info(session, bvid)
+    return {
+        'title': info.get('title'), 'author': info.get('owner', {}).get('name'),
+        'cover_url': info.get('pic'), 'description': info.get('desc'),
+        'duration_seconds': info.get('duration'),
+        'published_at': datetime.fromtimestamp(info['pubdate'], timezone.utc) if info.get('pubdate') else None,
+    }
+
+
 def search_bili_videos(keyword: str, limit: int = 5) -> list[dict]:
     """搜索 B 站视频，返回适合向用户展示的精简候选。
 

@@ -5,6 +5,7 @@
 - build_semantic_chunks 语义优先：chunk 边界尽量落在完整句子结束处，避免切开关键句
 """
 from config import CHUNK_TARGET_CHARS, CHUNK_OVERLAP_CHARS
+from text_normalization import to_simplified
 
 # 句子强结束符：命中才把当前 buffer 断成一个 chunk
 _END_MARKS = ("。", "！", "？", "…", "!", "?", ".", "…", "；", ";")
@@ -29,6 +30,7 @@ def build_chunks(
     buf_len = 0
 
     for start, end, text in segments:
+        text = to_simplified(text)
         buffer.append((start, end, text))
         buf_len += len(text)
         if buf_len >= target:
@@ -85,6 +87,7 @@ def build_semantic_chunks(
         buffer, buf_len = keep, keep_len
 
     for start, end, text in segments:
+        text = to_simplified(text)
         buffer.append((start, end, text))
         buf_len += len(text)
         last = text.rstrip()

@@ -9,10 +9,77 @@ export interface Video {
   /** 时长（秒） */
   duration: number
   created_at?: string | null
+  game_id?: 'arknights' | 'endfield' | null
+  category_id?: string | null
+  stage_name?: string | null
+  source_platform?: string | null
+  source_url?: string | null
+  cover_url?: string | null
+  published_at?: string | null
+  indexed_at?: string | null
+  updated_at?: string | null
+  description?: string | null
+  summary?: string | null
+}
+
+export interface StoredVideoChunk {
+  id: string
+  chunk_idx: number
+  start_sec: number | null
+  end_sec: number | null
+  source: string | null
+  text: string
+}
+
+export interface VideoMetadata {
+  title?: string
+  author?: string | null
+  game_id?: 'arknights' | 'endfield' | null
+  category_id?: string | null
+  stage_name?: string | null
+}
+
+export interface VideoMetadataPreview {
+  bvid: string
+  title: string | null
+  author: string | null
+  cover_url: string | null
+  duration_seconds: number | null
+  published_at: string | null
+  description: string | null
+  suggestion: { game_id: NonNullable<VideoMetadata['game_id']> | null; category_id: string | null }
+}
+export interface RetrievalScope {
+  game_id?: string | null
+  category_id?: string | null
+  video_ids?: string[]
 }
 
 export type ParseStatus = 'queued' | 'processing' | 'done' | 'error'
 export type ParseStep = 'fetch' | 'chunk' | 'embed' | 'index'
+
+export interface VisualConfirmation {
+  start: number
+  seconds: number
+  reason: string
+  expires_at: number
+  segment_count?: number | null
+}
+
+export interface VisualWindow {
+  start: number
+  end: number
+  status: 'indexed' | 'empty' | 'failed'
+  reason?: string | null
+}
+
+export interface VisualCoverage {
+  total: number
+  processed: number
+  with_evidence: number
+  empty: number
+  failed: VisualWindow[]
+}
 
 export interface TaskSnapshot {
   task_id: string
@@ -28,12 +95,16 @@ export interface TaskSnapshot {
   error: string | null
   pause_requested: boolean
   paused: boolean
+  visual_confirmation?: VisualConfirmation | null
+  visual_coverage?: VisualCoverage | null
 }
 
 export interface Citation {
   video_id: string | null
   title?: string | null
   author?: string | null
+  published_at?: string | null
+  stage_name?: string | null
   start: number
   end: number
   text: string
@@ -56,7 +127,7 @@ export interface ExternalVideo {
 
 /** Agent 对外展示的执行轨迹，不包含模型内部推理。 */
 export interface AgentStep {
-  stage: 'knowledge_search' | 'answer_check' | 'bilibili_search' | 'external_subtitles' | 'answer' | 'answer_review'
+  stage: 'video_lookup' | 'knowledge_search' | 'answer_check' | 'bilibili_search' | 'external_subtitles' | 'answer' | 'answer_review'
     | 'external_answer' | 'external_review'
     | 'external_audio_1' | 'external_audio_2' | 'external_audio_reuse'
     | 'game_state'

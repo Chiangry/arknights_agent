@@ -1,3 +1,5 @@
+import type { VisualConfirmation, VisualCoverage } from './backend';
+
 export type PageView = 'qa' | 'ingest' | 'library';
 
 export type GameTitle = 'arknights' | 'endfield';
@@ -5,6 +7,7 @@ export type GameScope = 'all' | GameTitle;
 
 export type KnowledgeCategory =
   | 'all'
+  | 'unknown'
   | 'main'
   | 'roguelike'
   | 'cc'
@@ -14,7 +17,7 @@ export type KnowledgeCategory =
   | 'combo'
   | 'char';
 
-export type VideoStatus = 'indexed' | 'processing' | 'queued' | 'error';
+export type VideoStatus = 'indexed' | 'processing' | 'queued' | 'error' | 'draft';
 
 export interface StrategyVideo {
   id: string;
@@ -38,6 +41,8 @@ export interface StrategyVideo {
   taskVideoId?: string;
   paused?: boolean;
   pauseRequested?: boolean;
+  visualConfirmation?: VisualConfirmation;
+  visualCoverage?: VisualCoverage;
   sourceUrl?: string;
   chunkCount: number;
   operatorCount: number;
@@ -86,6 +91,7 @@ export interface RetrievedChunk {
   videoId: string;
   videoTitle: string;
   creator: string;
+  evidenceSource?: string;
   publishedAt?: string;
   stageCode: string;
   timestampRange: string;

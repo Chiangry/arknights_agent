@@ -59,7 +59,41 @@ python cli.py ingest "https://www.bilibili.com/video/BVxxxx"   # 或直接写 BV
 python cli.py ask "你的问题"
 ```
 
+新入库的字幕、转写和画面证据默认转为简体中文，检索也接受繁体问题。视频标题和作者按来源保留。
+旧切片可在本地转换并重建全文分词，无需重新下载、转写或上传。脚本保留现有向量、时间戳及片段 ID；
+简繁转换不会纠正同音错名。若需要保留原字形，请先备份再写入：
+
+```bash
+# 预览：不改数据库。可省略 --video-id 扫描全库
+python scripts/migrate_simplified_chunks.py --video-id BV1FTsE6UEai
+# 确认后写入该视频的正文和全文分词
+python scripts/migrate_simplified_chunks.py --video-id BV1FTsE6UEai --apply
+```
+
 ## HTTP / SSE 接口（前端联调）
+
+问答默认只查本地知识库；证据不足不会自动搜索 B 站。输入框可勾选「联网搜索」，
+API 对应每次请求的 `web_search: true`。也可以直接说「去 B 站搜索……」或「只搜 B 站……」；
+未接入的站点不会自动换成 B 站。指定作者、视频或分类时不会把范围外的结果当证据。
+联网只允许搜索、读取候选字幕；下载或转写仍需单独确认。
+
+聊天历史由 PostgreSQL 保存（本机单用户）；旧浏览器的本地记录不迁移。已有数据库升级时运行一次：
+
+```bash
+docker exec -i video-rag-pg sh -c 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < deploy/migrations/005_chat_history.sql
+```
+
+以单个 Uvicorn worker 运行：刷新页面会读取最近的已保存进度，转写授权只在发起页面可操作；
+后端重启会保留阶段性正文，把未完成的记录标为中断。聊天历史不包含完整引用切片，保留视频和时间定位。
+不要在没有身份认证的情况下将后端端口暴露到公网。若使用非默认前端端口，在 `.env` 用
+`FRONTEND_ORIGINS` 指定允许的访问地址（逗号分隔，含协议和端口）。
+
+排查问答时，可运行 `python scripts/diagnose_query.py "明河的种族是什么" --video BV1FTsE6UEai`。
+脚本复用实际检索，输出搜索范围、分词、各召回通道、精排分数和淘汰原因；不会搜索 B 站。
+它使用项目的向量和精排服务；另加 `--verify` 会把最终命中的片段交给问答模型核验。
+要诊断网页里的实际问答，在 `.env` 临时设 `RAG_RETRIEVAL_DIAGNOSTICS=1` 并重启后端，
+可在日志按问答任务 ID 追踪检索及核验。日志可能含原问题和核验摘要，排查结束后关闭。
+
 在 CLI 之外，`app/` 提供了一层 FastAPI 接口，供 Vite 前端调用。
 
 启动（项目根目录，video_rag 环境）：
@@ -158,7 +192,7 @@ $ python cli.py ask "视频里他们准备小惊喜之前打算先做什么？"
   query（如「它的第二种物品」→「自然物的用法」），再用它做 pgvector 召回，解决指代召回不准。
   改写失败自动回退用原问题；无历史时不做额外调用。
 - **生成上下文**：历史消息与检索片段、当前问题一起拼入 DeepSeek messages，回答能结合前文。
-- **前端**：聊天记录存 Pinia，自动传最近 5 轮；「新建会话」清空；会话用 `localStorage` 持久化，刷新不丢。
+- **会话问答**：前端发送会话 ID 和请求 ID；后端从 PostgreSQL 读取最近的已完成消息并保存本轮结果。新建会话不会清空旧会话。
 
 ## 后续可扩展
 - 视频删除接口与前端入口（`store.delete_video` 已就绪，外键 CASCADE 清理片段）

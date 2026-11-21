@@ -1,6 +1,7 @@
 """语音转文字：用 faster-whisper 将视频/音频转成带时间戳的文本片段。"""
 import config
 from faster_whisper import BatchedInferencePipeline, WhisperModel
+from text_normalization import to_simplified
 
 _model = None
 
@@ -40,7 +41,7 @@ def transcribe(video_path: str, on_progress=None) -> list:
     for seg in segments:
         text = (seg.text or "").strip()
         if text:
-            result.append((seg.start, seg.end, text))
+            result.append((seg.start, seg.end, to_simplified(text)))
         if on_progress:
             done = float(seg.end)
             on_progress(min(done, total) if total > 0 else done, total)

@@ -7,6 +7,7 @@ from index.embedder import embed_texts
 from index.reranker import rerank_scores
 from ingest.bili_fetcher import fetch_subtitles
 from ingest.chunker import build_chunks
+from text_normalization import to_simplified
 
 
 def _subtitle_chunks(video: dict) -> list[dict]:
@@ -69,6 +70,7 @@ def rank_external(query: str, chunks: list[dict]) -> list[dict]:
     if not chunks:
         return []
 
+    query = to_simplified(query)
     [query_vector] = embed_texts([query])
     ranked = []
     for start in range(0, len(chunks), 32):

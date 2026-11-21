@@ -9,6 +9,7 @@ import {
 import { GameScope, KnowledgeCategory, StrategyVideo } from '../types/strategy';
 import { ResilientImage } from './ResilientImage';
 import { DEMO_MODE } from '../data/backendPresentation';
+import { useCatalog } from '../hooks/useCatalog';
 
 interface KnowledgeLibraryPageProps {
   videos: StrategyVideo[];
@@ -23,41 +24,13 @@ const GAME_TABS: { id: GameScope; label: string }[] = [
   { id: 'endfield', label: '终末地' },
 ];
 
-const CATEGORY_TABS_BY_GAME: Record<
-  GameScope,
-  { id: KnowledgeCategory; label: string }[]
-> = {
-  all: [
-    { id: 'all', label: '全部分区' },
-    { id: 'main', label: '主线与活动' },
-    { id: 'roguelike', label: '集成战略' },
-    { id: 'aic', label: '集成工业产线' },
-    { id: 'exploration', label: '探索与 Boss' },
-    { id: 'operator', label: '干员测评' },
-    { id: 'char', label: '角色评测' },
-  ],
-  arknights: [
-    { id: 'all', label: '全部分区' },
-    { id: 'main', label: '主线与活动' },
-    { id: 'roguelike', label: '集成战略' },
-    { id: 'cc', label: '危机合约' },
-    { id: 'operator', label: '干员测评' },
-  ],
-  endfield: [
-    { id: 'all', label: '全部分区' },
-    { id: 'aic', label: '集成工业产线' },
-    { id: 'exploration', label: '探索与 Boss' },
-    { id: 'combo', label: '配队连携' },
-    { id: 'char', label: '角色评测' },
-  ],
-};
-
 export function KnowledgeLibraryPage({
   videos,
   onInspectVideo,
   onAskAboutVideo,
   onGoToIngest,
 }: KnowledgeLibraryPageProps) {
+  const { games, error: catalogError } = useCatalog();
   const [selectedGame, setSelectedGame] = useState<GameScope>('all');
   const [selectedCategory, setSelectedCategory] = useState<KnowledgeCategory>('all');
   const [keyword, setKeyword] = useState<string>('');
@@ -67,12 +40,13 @@ export function KnowledgeLibraryPage({
     setSelectedCategory('all');
   };
 
-  const categoryTabs = CATEGORY_TABS_BY_GAME[selectedGame];
+  const categoryTabs = [{ id: 'all' as const, label: '全部分区' }, { id: 'unknown' as const, label: '未分类' },
+    ...games.filter(g => selectedGame === 'all' || g.id === selectedGame).flatMap(g => g.categories)];
 
   const filtered = videos.filter((video) => {
     const matchesGame = selectedGame === 'all' ? true : video.game === selectedGame;
     const matchesCat =
-      selectedCategory === 'all' ? true : !video.backend && video.category === selectedCategory;
+      selectedCategory === 'all' ? true : video.category === selectedCategory;
     const q = keyword.trim().toLowerCase();
     const matchesQuery =
       !q ||
@@ -105,6 +79,7 @@ export function KnowledgeLibraryPage({
               <span aria-hidden="true">·</span>
               <span>{DEMO_MODE ? `${totalKeyframes} 帧站位网格` : '关键帧暂未接入'}</span>
             </div>
+            {catalogError && <p role="alert" className="text-xs text-rose-600">{catalogError}</p>}
             <h1 className="text-2xl sm:text-[28px] font-semibold tracking-tight text-slate-950 text-balance">
               攻略切片知识库
             </h1>
@@ -135,8 +110,6 @@ export function KnowledgeLibraryPage({
                   <button
                     key={gameTab.id}
                     type="button"
-                    disabled={!DEMO_MODE && gameTab.id !== 'all'}
-                    title={!DEMO_MODE && gameTab.id !== 'all' ? '现有视频尚无游戏归属数据' : undefined}
                     onClick={() => handleGameChange(gameTab.id)}
                     className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
                       active
@@ -162,8 +135,6 @@ export function KnowledgeLibraryPage({
                   <button
                     key={tab.id}
                     type="button"
-                    disabled={!DEMO_MODE && tab.id !== 'all'}
-                    title={!DEMO_MODE && tab.id !== 'all' ? '分类数据暂未接入' : undefined}
                     onClick={() => setSelectedCategory(tab.id)}
                     className={`px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
                       active
@@ -286,6 +257,7 @@ export function KnowledgeLibraryPage({
                           <button
                             type="button"
                             onClick={() => onAskAboutVideo(video)}
+                            disabled={video.backend && video.status !== 'indexed'}
                             className={`inline-flex items-center gap-1 text-xs font-semibold hover:text-slate-950 transition-colors cursor-pointer ${accentText}`}
                           >
                             <MessageSquareText className="w-3.5 h-3.5" />

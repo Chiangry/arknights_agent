@@ -36,11 +36,15 @@ def stream_game_answer(
     top_k: int | None,
     task_id: str,
     answer: AnswerStream,
+    web_requested: bool = False,
 ) -> Iterator[dict]:
     yield step("game_state", "running", "正在核对当前对局与可选动作…")
     state, intent, parsed = update_game_state(question, previous)
     if not parsed:
         yield step("game_state", "warning", "没能确认本轮的对局变化")
+        if web_requested:
+            yield from answer(question, top_k=top_k, task_id=task_id, answer_context=None)
+            return
         yield from publish_answer("这轮的对局状态没能确认。请重试，或用「回合、剩余资源、可选动作」的格式补充一下。", [])
         return
 
@@ -56,6 +60,10 @@ def stream_game_answer(
     context = None
     if intent == "recommend":
         if not (state.turn or state.lineup or state.resources or state.options):
+            if web_requested:
+                yield step("game_state", "warning", "没有可用的对局状态，按通用问题查找攻略")
+                yield from answer(question, top_k=top_k, task_id=task_id, answer_context=None)
+                return
             yield from publish_answer("你现在有哪些可选操作？如果这些操作有资源消耗，也可以一起告诉我。", [])
             return
         strategy = strategy_context(state)

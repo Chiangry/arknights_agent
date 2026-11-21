@@ -1,5 +1,6 @@
 """中文分词：为全文检索(tsvector/tsquery)提供分词。入库时对 chunk 分词，查询时对问题分词。"""
 import jieba
+from text_normalization import to_simplified
 
 # 中文停用词：无检索价值的虚词/疑问词。注意 jieba 会把"什么/怎么"切成独立词，
 # 因此必须把它们作为独立的 2 字词列出，不能用"没什么/有什么"这类粘连串。
@@ -14,7 +15,7 @@ STOP = set("""
 
 def cut(text: str):
     """返回去停用词后的词列表（过滤单字）。"""
-    return [w for w in jieba.cut(text) if w.strip() and len(w) > 1 and w not in STOP]
+    return [w for w in jieba.cut(to_simplified(text)) if w.strip() and len(w) > 1 and w not in STOP]
 
 
 def tokenize(text: str) -> str:

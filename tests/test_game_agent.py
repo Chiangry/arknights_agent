@@ -1,6 +1,7 @@
 """对局 Agent 和普通问答共享证据流的离线回归测试。"""
 
 import json
+from functools import partial
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import Mock, patch
@@ -34,6 +35,9 @@ def read_events(response):
 
 
 class GameAgentTests(TestCase):
+    def setUp(self):
+        self.enterContext(patch("rag.video_retrieval.retrieval_video_catalog", return_value=[]))
+
     def test_plain_question_does_not_enter_game_agent(self):
         with (
             patch("app.routers.qa.stream_game_answer") as game,
@@ -44,7 +48,7 @@ class GameAgentTests(TestCase):
 
         game.assert_not_called()
         retrieve.assert_called_once_with("乌萨斯怎么玩", None)
-        search.assert_called_once()
+        search.assert_not_called()
         self.assertEqual(events[-1]["event"], "done")
         self.assertIsNone(tasks.get_task(events[0]["data"]["task_id"]))
 
@@ -72,13 +76,14 @@ class GameAgentTests(TestCase):
         self.assertIn("金币需 5，现有 3", next(item["data"]["text"] for item in events if item["event"] == "delta"))
         self.assertEqual(events[-1]["event"], "done")
 
-    def test_partial_game_answer_falls_back_and_keeps_confirmation_gate(self):
+    def test_partial_game_answer_with_web_search_keeps_confirmation_gate(self):
         previous = GameState(
             faction="乌萨斯", turn="第4回合", resources={"金币": 3},
             options=[Action(name="刷新", costs={"金币": 2})],
         )
         hit = {"text": "刷新商店消耗两金币", "meta": {"video_id": "BVlocal", "start": 3, "end": 7}}
         client = completion_client(
+            '{"verdict":"partial","reason":"缺少阵容依据","missing":["阵容选择"]}',
             "本局可以刷新商店，但缺少阵容调整的依据。[引用1]",
             '{"verdict":"partial","reason":"缺少阵容依据","missing":["阵容选择"]}',
         )
@@ -99,7 +104,8 @@ class GameAgentTests(TestCase):
             patch.object(services, "_rank_audio", return_value=[]),
             patch.object(services, "_transcribe_candidate") as transcribe,
         ):
-            stream = stream_game_answer("下一步怎么选", previous, top_k=5, task_id=task_id, answer=services.stream_answer)
+            stream = stream_game_answer("下一步怎么选", previous, top_k=5, task_id=task_id,
+                                        answer=partial(services.stream_answer, web_search=True))
             events = []
             for item in stream:
                 events.append(item)
@@ -109,7 +115,7 @@ class GameAgentTests(TestCase):
 
         retrieve.assert_called_once_with("乌萨斯 第4回合 刷新 下一步怎么选", 5)
         self.assertIn("阵容选择", search.call_args.args[0])
-        generate, review = client.chat.completions.create.call_args_list
+        _, generate, review = client.chat.completions.create.call_args_list
         self.assertIn("待确认动作只能作条件建议", generate.kwargs["messages"][0]["content"])
         review_input = json.loads(review.kwargs["messages"][1]["content"])
         self.assertEqual(review_input["question"], "下一步怎么选")

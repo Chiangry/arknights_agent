@@ -53,11 +53,55 @@ def get_task(task_id: str) -> dict | None:
         return dict(t) if t else None
 
 
+def video_import_pending(video_id: str) -> bool:
+    with _lock:
+        return any(
+            task["status"] in ("queued", "processing")
+            and (
+                (task["kind"] in ("bili", "local", "bili-auto") and task["ref"] == video_id)
+                or (task["kind"] == "bili-visual" and task["ref"].split(":", 1)[0] == video_id)
+            )
+            for task in _tasks.values()
+        )
+
+
 def update_task(task_id: str, **fields) -> None:
     with _lock:
         if task_id in _tasks:
             _tasks[task_id].update(fields)
             _lock.notify_all()
+
+
+def wait_visual_confirmation(task_id: str, start: float, seconds: float, reason: str,
+                             timeout: float = 180.0, *, segment_count: int | None = None) -> str:
+    """确认本次任务的授权范围；超时或丢失任务均不上传。"""
+    with _lock:
+        task = _tasks.get(task_id)
+        if not task or task["kind"] != "bili-auto" or task["status"] != "processing":
+            return "expired"
+        deadline = time.monotonic() + timeout
+        task["visual_confirmation"] = {"start": start, "seconds": seconds, "reason": reason,
+                                       "expires_at": time.time() + timeout, "segment_count": segment_count}
+        task["visual_deadline"] = deadline
+        task["message"] = "等待全片分段上传授权…" if segment_count is not None else "等待静音上传授权…"
+        _lock.wait_for(lambda: "visual_decision" in task or task["status"] != "processing",
+                       timeout=max(0.0, deadline - time.monotonic()))
+        task.pop("visual_confirmation", None)
+        task.pop("visual_deadline", None)
+        return task.get("visual_decision", "expired") if task["status"] == "processing" else "expired"
+
+
+def decide_visual_confirmation(task_id: str, approved: bool) -> bool:
+    with _lock:
+        task = _tasks.get(task_id)
+        if (not task or task["kind"] != "bili-auto" or task["status"] != "processing"
+                or "visual_decision" in task or time.monotonic() >= task.get("visual_deadline", 0)):
+            return False
+        task["visual_decision"] = "approved" if approved else "declined"
+        task.pop("visual_confirmation", None)
+        task["message"] = "已收到画面解析授权" if approved else "已跳过画面上传"
+        _lock.notify_all()
+        return True
 
 
 def set_paused(task_id: str, paused: bool) -> bool:
@@ -163,5 +207,7 @@ def snapshot(task_id: str) -> dict:
         "error": t["error"],
         "pause_requested": t["pause_requested"],
         "paused": t["paused"],
+        "visual_confirmation": t.get("visual_confirmation"),
+        "visual_coverage": t.get("visual_coverage"),
     }
     return {"event": "done" if done else "progress", "data": payload}

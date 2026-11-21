@@ -9,7 +9,7 @@ import { ResilientImage } from './ResilientImage';
 
 const actionClass = 'rounded-lg px-3 py-1.5 text-xs font-semibold bg-white/70 text-slate-700 hover:bg-white disabled:opacity-40';
 const primaryClass = 'ark-chamfer-sm px-4 py-2 inline-flex items-center gap-1.5 text-xs font-semibold bg-[#17D1FF] text-[#071B26] hover:bg-[#33D9FF] disabled:opacity-45 disabled:cursor-not-allowed';
-const panelClass = 'glass-panel rounded-2xl p-4 sm:p-5 space-y-3 text-xs text-slate-700';
+const panelClass = 'glass-panel min-w-0 max-w-full rounded-2xl p-4 sm:p-5 space-y-3 text-xs text-slate-700';
 
 type SearchVideo = AudioConfirmation['videos'][number] & { cover?: string };
 
@@ -27,7 +27,7 @@ function CandidateRow({ video, checked, disabled, onToggle }: {
     video.play != null ? `${video.play.toLocaleString('zh-CN')} 播放` : '',
   ].filter(Boolean).join(' · ');
   return (
-    <div className={`relative flex items-center gap-3 rounded-xl border p-2.5 sm:p-3 transition-colors ${checked
+    <div className={`relative flex min-w-0 items-center gap-3 overflow-hidden rounded-xl border p-2.5 sm:p-3 transition-colors ${checked
       ? 'bg-white border-[#17D1FF] shadow-sm' : 'bg-white/55 border-slate-200/75 hover:bg-white/85'}`}>
       {selectable && (
         <label className="flex shrink-0 items-center cursor-pointer">
@@ -43,11 +43,12 @@ function CandidateRow({ video, checked, disabled, onToggle }: {
         <ResilientImage src={video.cover || ''} alt={video.title} className="w-full h-full object-cover" fallbackLabel="B 站" />
         {video.duration && <span className="absolute bottom-1 right-1 px-1 rounded bg-slate-950/75 text-[10px] font-mono text-white">{video.duration}</span>}
       </a>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-hidden">
         <a href={biliUrl(video.bvid)} target="_blank" rel="noreferrer"
-          className="text-[13px] font-semibold text-slate-900 line-clamp-2 hover:text-[#008DB3]">{video.title}</a>
-        <div className="mt-1 break-words text-[11px] text-slate-500 font-mono">{meta}</div>
-        {video.description && <p className="mt-1 line-clamp-1 text-[11px] text-slate-600">{video.description}</p>}
+          title={video.title}
+          className="text-[13px] font-semibold text-slate-900 line-clamp-2 [overflow-wrap:anywhere] hover:text-[#008DB3]">{video.title}</a>
+        <div title={meta} className="mt-1 truncate text-[11px] text-slate-500 font-mono">{meta}</div>
+        {video.description && <p title={video.description} className="mt-1 truncate text-[11px] text-slate-600">{video.description}</p>}
       </div>
     </div>
   );
@@ -58,7 +59,7 @@ function SearchHeading({ details, count, selection }: { details?: ExternalSearch
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-950">
-          <Globe className="size-4 text-[#008DB3]" /> 本地证据不足 · B 站攻略推荐
+          <Globe className="size-4 text-[#008DB3]" /> B 站搜索结果
         </h3>
         <span className="font-mono tabular-nums text-slate-500">
           {selection == null ? `${count} 部候选` : `已勾选 ${selection} / ${count}`}
@@ -92,7 +93,7 @@ export function AudioChoice({ taskId, confirmation, candidates, details, selecte
     <section className={panelClass} aria-label="转写确认">
       <SearchHeading details={details} count={confirmation.videos.length} selection={selected.length} />
       <p>是否下载并转写这些音轨？每部最多 {confirmation.max_mib_per_video} MiB，确认窗口 {confirmation.timeout_seconds} 秒。</p>
-      <div className="grid gap-2.5">
+      <div className="grid grid-cols-1 gap-2.5">
         {confirmation.videos.map(video => (
           <CandidateRow key={video.bvid} video={{ ...candidates?.find(v => v.bvid === video.bvid), ...video }}
             checked={selected.includes(video.bvid)} disabled={busy}
@@ -145,10 +146,13 @@ export function TranscriptOffer({ videos, tasks, onSave }: {
       {videos.map(v => {
         const task = tasks[v.bvid];
         return (
-          <label key={v.bvid} className="flex gap-2 p-2 rounded-lg bg-white/65">
+          <label key={v.bvid} className="flex min-w-0 items-start gap-2 overflow-hidden p-2 rounded-lg bg-white/65">
             <input type="checkbox" checked={selected.includes(v.bvid)} disabled={!!locked(v.bvid)}
+              className="mt-0.5 shrink-0"
               onChange={e => setSelected(s => e.target.checked ? [...s, v.bvid] : s.filter(id => id !== v.bvid))} />
-            <span>{v.title}<br /><small>引用 {v.citation_count} 段{recommended(v) ? ' · 推荐入库' : ''}
+            <span className="min-w-0 flex-1 overflow-hidden">
+              <span title={v.title} className="block truncate">{v.title}</span>
+              <small className="block truncate">引用 {v.citation_count} 段{recommended(v) ? ' · 推荐入库' : ''}
               {task || results[v.bvid] ? ` · ${results[v.bvid]?.running || results[v.bvid]?.done
                 ? results[v.bvid].message : task?.progressStage || results[v.bvid]?.message}` : ''}
             </small></span>
@@ -174,7 +178,7 @@ export function ExternalCandidates({ videos, details, pending }: {
     <section className={panelClass} aria-label="B 站攻略推荐">
       <SearchHeading details={details} count={videos.length} />
       {pending && !!videos.length && <p className="text-slate-500">将先查找可用字幕，下载转写前会征求确认。</p>}
-      {videos.length ? <div className="grid gap-2.5">
+      {videos.length ? <div className="grid grid-cols-1 gap-2.5">
         {videos.map(video => <CandidateRow key={video.bvid} video={video} />)}
       </div> : <p>未找到可用候选。</p>}
     </section>

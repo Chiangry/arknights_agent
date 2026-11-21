@@ -5,6 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# 部署在非本地前端时，可配置允许发起删除操作的浏览器来源。
+VIDEO_DELETE_ORIGINS = {
+    f"http://{host}:{port}"
+    for host in ("localhost", "127.0.0.1")
+    for port in (3000, 5173)
+}
+VIDEO_DELETE_ORIGINS.update(v.strip() for v in os.getenv("VIDEO_DELETE_ORIGINS", "").split(",") if v.strip())
+
 # ===== LLM 生成（DeepSeek）=====
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
@@ -62,6 +70,7 @@ RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "15"))
 # rerank 分数下限：低于此值视为无关引用剔除（实测噪声 <0.02、错字弱相关≈0.06、正常相关 >0.2）
 RERANK_MIN_SCORE = float(os.getenv("RERANK_MIN_SCORE", "0.05"))
 RERANK_TIMEOUT = int(os.getenv("RERANK_TIMEOUT", "15"))
+RAG_RETRIEVAL_DIAGNOSTICS = os.getenv("RAG_RETRIEVAL_DIAGNOSTICS", "0") == "1"
 # 相邻片段扩展：命中片段并入同视频前后各 N 个相邻片段，避免一个完整操作被
 # chunk 边界切断后只召回半截。0 表示关闭。
 NEIGHBOR_WINDOW = int(os.getenv("NEIGHBOR_WINDOW", "1"))

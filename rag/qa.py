@@ -2,6 +2,7 @@
 import config
 from openai import OpenAI
 from rag.retriever import retrieve
+from text_normalization import to_simplified
 
 _client = None
 
@@ -32,7 +33,7 @@ def ask(question: str, top_k: int | None = None) -> tuple:
 
     system = (
         "你是视频知识库问答助手。根据下面提供的视频片段回答用户的问题。"
-        "回答要准确、忠于片段内容，并在关键信息后标注来源时间段（如 [12s-45s]）。"
+        "默认使用简体中文。回答要准确、忠于片段内容，并在关键信息后标注来源时间段（如 [12s-45s]）。"
         "如果片段中没有答案，明确说明'片段中未找到相关信息'，不要编造。"
     )
     user = f"视频片段：\n{context}\n\n问题：{question}"
@@ -44,5 +45,5 @@ def ask(question: str, top_k: int | None = None) -> tuple:
             {"role": "user", "content": user},
         ],
     )
-    answer = resp.choices[0].message.content
+    answer = to_simplified(resp.choices[0].message.content or "")
     return answer, hits

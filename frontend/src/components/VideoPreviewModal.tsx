@@ -1,13 +1,20 @@
 import { X, Play, Clock, Layers, MessageSquareText } from 'lucide-react';
+import { useState } from 'react';
 import { StrategyVideo } from '../types/strategy';
 import { ResilientImage } from './ResilientImage';
 import { biliUrl } from '../data/backendPresentation';
+import { VideoMetadataEditor } from './VideoMetadataEditor';
+import { VideoChunksPanel } from './VideoChunksPanel';
+import { VideoVisualCoverage } from './VideoVisualCoverage';
 
 interface VideoPreviewModalProps {
   video: StrategyVideo | null;
   highlightTimestamp?: string;
   onClose: () => void;
   onAskAboutVideo: (video: StrategyVideo) => void;
+  onMetadataSaved: () => Promise<void>;
+  onDeleteVideo: (videoId: string) => Promise<void>;
+  onSupplementVideo: (video: StrategyVideo) => Promise<void>;
 }
 
 export function VideoPreviewModal({
@@ -15,8 +22,18 @@ export function VideoPreviewModal({
   highlightTimestamp,
   onClose,
   onAskAboutVideo,
+  onMetadataSaved,
+  onDeleteVideo,
+  onSupplementVideo,
 }: VideoPreviewModalProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [supplementing, setSupplementing] = useState(false);
+  const [supplementError, setSupplementError] = useState('');
   if (!video) return null;
+  const close = () => { if (!deleting) onClose(); };
+  const canDelete = video.backend && !video.taskId && video.status === 'indexed';
   const seconds = highlightTimestamp?.split(':').reduce((acc, n) => acc * 60 + Number(n), 0);
   const link = video.sourceUrl && biliUrl(video.bvId, seconds);
 
@@ -34,14 +51,14 @@ export function VideoPreviewModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="video-modal-title"
-      onClick={onClose}
+      onClick={close}
     >
       <div
-        className="w-full max-w-3xl glass-panel-elevated rounded-2xl overflow-hidden shadow-2xl"
+        className="w-full max-w-3xl max-h-[calc(100dvh-2rem)] flex flex-col glass-panel-elevated rounded-2xl overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200/70 flex items-center justify-between gap-4">
+        <div className="px-6 py-4 border-b border-slate-200/70 flex items-center justify-between gap-4 shrink-0">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-mono tabular-nums">
               <span className="font-semibold text-slate-800">{video.gameLabel}</span>
@@ -65,7 +82,8 @@ export function VideoPreviewModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
+            disabled={deleting}
             aria-label="关闭视频切片预览"
             className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100/80 transition-colors cursor-pointer shrink-0"
           >
@@ -74,7 +92,7 @@ export function VideoPreviewModal({
         </div>
 
         {/* Visual Frame & Metadata */}
-        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+        <div className="p-6 space-y-6 min-h-0 overflow-y-auto">
           <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-100">
             <ResilientImage
               src={video.thumbnail}
@@ -112,10 +130,23 @@ export function VideoPreviewModal({
           </div>
 
           {/* Summary & Operators */}
+          {video.backend && !video.taskId && <VideoMetadataEditor key={video.id} video={video} onSaved={onMetadataSaved} />}
+          {video.backend && !video.taskId && link && <div className="space-y-1">
+            <button type="button" disabled={supplementing || deleting || confirmDelete}
+              className="text-sm text-[#008DB3] disabled:opacity-50"
+              onClick={async () => {
+                setSupplementing(true);
+                setSupplementError('');
+                try { await onSupplementVideo(video); }
+                catch (err) { setSupplementError(err instanceof Error ? err.message : '无法启动画面抽样'); }
+                finally { setSupplementing(false); }
+              }}>{supplementing ? '正在提交…' : '继续解析全片画面'}</button>
+            {supplementError && <p role="alert" className="text-xs text-rose-700">{supplementError}</p>}
+          </div>}
+          {video.backend && !video.taskId && link && <VideoVisualCoverage videoId={video.id} />}
           {video.backend ? (
             <div className="space-y-2 text-sm text-slate-700">
               <p>{video.progressStage || video.summary}</p>
-              <p className="text-xs text-slate-500">真实视频的关键帧与高光时间轴暂未接入；问答中的引用卡片会显示实际字幕时间。</p>
             </div>
           ) : <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-900">攻略核心摘要</h3>
@@ -132,6 +163,8 @@ export function VideoPreviewModal({
               ))}
             </div>
           </div>}
+
+          {video.backend && !video.taskId && <VideoChunksPanel videoId={video.id} chunkCount={video.chunkCount} />}
 
           {/* Extracted Keyframe Timeline */}
           {!video.backend && <div className="border-t border-slate-200/70 pt-5 space-y-3">
@@ -172,19 +205,44 @@ export function VideoPreviewModal({
         </div>
 
         {/* Footer Action */}
-        <div className="px-6 py-4 border-t border-slate-200/70 bg-white/40 flex items-center justify-end gap-4">
-          <div className="flex items-center gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-slate-200/70 bg-white/40 space-y-3 shrink-0">
+          {confirmDelete && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2">
+              <p className="text-sm text-slate-800">确定从知识库删除《{video.title}》？</p>
+              <p className="text-xs text-slate-600">视频档案、字幕与画面切片及其向量将一并删除，无法撤销。不会删除 B 站原视频、本地原文件或聊天记录。</p>
+              {deleteError && <p role="alert" className="text-xs text-rose-700">{deleteError}</p>}
+              <div className="flex gap-3">
+                <button type="button" disabled={deleting} className="px-3 py-2 rounded-lg text-xs hover:bg-white"
+                  onClick={() => setConfirmDelete(false)}>取消</button>
+                <button type="button" disabled={deleting}
+                  className="px-3 py-2 rounded-lg bg-rose-700 text-white text-xs hover:bg-rose-800 disabled:opacity-60"
+                  onClick={async () => {
+                    setDeleting(true);
+                    setDeleteError('');
+                    try { await onDeleteVideo(video.id); }
+                    catch (err) { setDeleteError(err instanceof Error ? err.message : '删除失败，请重试'); }
+                    finally { setDeleting(false); }
+                  }}>{deleting ? '正在删除…' : '确认删除'}</button>
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+          {canDelete && !confirmDelete ? <button type="button"
+            className="px-2 py-2 text-xs font-medium text-rose-700 hover:underline"
+            onClick={() => { setDeleteError(''); setConfirmDelete(true); }}>删除入库视频</button> : <span />}
+          <div className="flex flex-wrap items-center gap-3">
             {link && <a href={link} target="_blank" rel="noreferrer" className="text-xs font-semibold text-[#007894] hover:underline">打开 B 站原视频</a>}
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
+              disabled={deleting}
               className="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100/80 transition-colors cursor-pointer whitespace-nowrap"
             >
               关闭
             </button>
             <button
               type="button"
-              disabled={video.backend && video.status !== 'indexed'}
+              disabled={deleting || confirmDelete || (video.backend && video.status !== 'indexed')}
               onClick={() => {
                 onAskAboutVideo(video);
                 onClose();
@@ -194,6 +252,7 @@ export function VideoPreviewModal({
               <MessageSquareText className="w-3.5 h-3.5" />
               针对此攻略提问
             </button>
+          </div>
           </div>
         </div>
       </div>
